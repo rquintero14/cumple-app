@@ -1,128 +1,201 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
+  Alert,
   Pressable,
   StyleSheet,
-  Alert,
-} from "react-native";
-import {
-  validateName,
-  validateDay,
-  validateMonth,
-  validateYear,
-  validateDate,
-} from "../utils/validation";
+  Text,
+  TextInput,
+  View,
+  Platform,
+} from 'react-native';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
+import { router } from 'expo-router';
+import { addBirthday } from '../database/birthdayRepository';
 
-export default function AgregarScreen() {
-  const [nombre, setNombre] = useState("");
-  const [dia, setDia] = useState("");
-  const [mes, setMes] = useState("");
-  const [anio, setAnio] = useState("");
+export default function Agregar() {
+  const [name, setName] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [includeYear, setIncludeYear] = useState(false);
 
-const guardarCumpleanos = () => {
-  const nameError = validateName(nombre);
+  function handleDateChange(
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) {
+    setShowDatePicker(false);
 
-  if (nameError) {
-    Alert.alert("Nombre inválido", nameError);
-    return;
+    if (event.type === 'set' && selectedDate) {
+      setBirthDate(selectedDate);
+    }
   }
 
-  const dayError = validateDay(dia);
-
-  if (dayError) {
-    Alert.alert("Día inválido", dayError);
-    return;
+  function formatDate(date: Date) {
+    return date.toLocaleDateString('es-PA', {
+      day: '2-digit',
+      month: 'long',
+    });
   }
 
-  const monthError = validateMonth(mes);
+  async function handleSave() {
+    if (!name.trim()) {
+      Alert.alert(
+        'Dato requerido',
+        'Escribe el nombre de la persona.'
+      );
+      return;
+    }
 
-  if (monthError) {
-    Alert.alert("Mes inválido", monthError);
-    return;
+    if (!birthDate) {
+      Alert.alert(
+        'Dato requerido',
+        'Selecciona la fecha de cumpleaños.'
+      );
+      return;
+    }
+
+    const dayNumber = birthDate.getDate();
+    const monthNumber = birthDate.getMonth() + 1;
+
+    let yearNumber: number | null = null;
+
+    if (includeYear) {
+      yearNumber = birthDate.getFullYear();
+
+      const currentYear = new Date().getFullYear();
+
+      if (
+        yearNumber < 1900 ||
+        yearNumber > currentYear
+      ) {
+        Alert.alert(
+          'Año inválido',
+          `El año debe estar entre 1900 y ${currentYear}.`
+        );
+        return;
+      }
+    }
+
+    try {
+      await addBirthday(
+        name.trim(),
+        dayNumber,
+        monthNumber,
+        yearNumber
+      );
+
+      Alert.alert(
+        'Cumpleaños guardado',
+        `${name.trim()} fue agregado correctamente.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error(
+        'Error guardando cumpleaños:',
+        error
+      );
+
+      Alert.alert(
+        'Error',
+        'No se pudo guardar el cumpleaños.'
+      );
+    }
   }
-
-  const yearError = validateYear(anio);
-
-  if (yearError) {
-    Alert.alert("Año inválido", yearError);
-    return;
-  }
-
-  const dateError = validateDate(dia, mes, anio);
-
-  if (dateError) {
-    Alert.alert("Fecha inválida", dateError);
-    return;
-  }
-
-  Alert.alert(
-    "Cumpleaños válido",
-    `Nombre: ${nombre.trim()}\nFecha: ${dia}/${mes}${
-      anio ? `/${anio}` : ""
-    }`
-  );
-};
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Agregar cumpleaños</Text>
+      <Text style={styles.title}>
+        Agregar cumpleaños
+      </Text>
 
-      <Text style={styles.label}>Nombre de la persona</Text>
+      <Text style={styles.label}>
+        Nombre
+      </Text>
 
       <TextInput
         style={styles.input}
         placeholder="Ej. María"
-        value={nombre}
-        onChangeText={setNombre}
+        value={name}
+        onChangeText={setName}
+        autoCapitalize="words"
       />
 
-      <Text style={styles.sectionTitle}>Fecha de nacimiento</Text>
+      <Text style={styles.label}>
+        Fecha de cumpleaños
+      </Text>
 
-      <View style={styles.dateContainer}>
-        <View style={styles.dateField}>
-          <Text style={styles.label}>Día</Text>
+      <Pressable
+        style={styles.dateButton}
+        onPress={() => setShowDatePicker(true)}
+      >
+        <Text
+          style={
+            birthDate
+              ? styles.dateText
+              : styles.placeholderText
+          }
+        >
+          {birthDate
+            ? formatDate(birthDate)
+            : 'Seleccionar fecha'}
+        </Text>
+      </Pressable>
 
-          <TextInput
-            style={styles.input}
-            placeholder="DD"
-            keyboardType="numeric"
-            maxLength={2}
-            value={dia}
-            onChangeText={setDia}
-          />
+      {showDatePicker && (
+        <DateTimePicker
+          value={birthDate || new Date()}
+          mode="date"
+          display={
+            Platform.OS === 'android'
+              ? 'calendar'
+              : 'spinner'
+          }
+          onChange={handleDateChange}
+        />
+      )}
+
+      <Pressable
+        style={styles.checkboxContainer}
+        onPress={() => setIncludeYear(!includeYear)}
+      >
+        <View
+          style={[
+            styles.checkbox,
+            includeYear && styles.checkboxSelected,
+          ]}
+        >
+          {includeYear && (
+            <Text style={styles.checkmark}>
+              ✓
+            </Text>
+          )}
         </View>
 
-        <View style={styles.dateField}>
-          <Text style={styles.label}>Mes</Text>
+        <Text style={styles.checkboxText}>
+          Conozco el año de nacimiento
+        </Text>
+      </Pressable>
 
-          <TextInput
-            style={styles.input}
-            placeholder="MM"
-            keyboardType="numeric"
-            maxLength={2}
-            value={mes}
-            onChangeText={setMes}
-          />
-        </View>
+      {includeYear && birthDate && (
+        <Text style={styles.yearInfo}>
+          Año de nacimiento:{' '}
+          {birthDate.getFullYear()}
+        </Text>
+      )}
 
-        <View style={styles.dateFieldYear}>
-          <Text style={styles.label}>Año (opcional)</Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="AAAA"
-            keyboardType="numeric"
-            maxLength={4}
-            value={anio}
-            onChangeText={setAnio}
-          />
-        </View>
-      </View>
-
-      <Pressable style={styles.button} onPress={guardarCumpleanos}>
-        <Text style={styles.buttonText}>Guardar cumpleaños</Text>
+      <Pressable
+        style={styles.button}
+        onPress={handleSave}
+      >
+        <Text style={styles.buttonText}>
+          Guardar cumpleaños
+        </Text>
       </Pressable>
     </View>
   );
@@ -132,61 +205,99 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
+    backgroundColor: '#fff',
   },
 
   title: {
     fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 32,
-  },
-
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginTop: 28,
-    marginBottom: 16,
+    fontWeight: 'bold',
+    marginBottom: 30,
   },
 
   label: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: '600',
     marginBottom: 8,
   },
 
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: '#ccc',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: "#fff",
+    marginBottom: 22,
   },
 
-  dateContainer: {
-    flexDirection: "row",
-    gap: 10,
+  dateButton: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 15,
+    marginBottom: 22,
   },
 
-  dateField: {
-    flex: 1,
+  dateText: {
+    fontSize: 16,
+    color: '#222',
   },
 
-  dateFieldYear: {
-    flex: 1.5,
+  placeholderText: {
+    fontSize: 16,
+    color: '#888',
+  },
+
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 1,
+    borderColor: '#999',
+    borderRadius: 5,
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  checkboxSelected: {
+    backgroundColor: '#333',
+    borderColor: '#333',
+  },
+
+  checkmark: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  checkboxText: {
+    fontSize: 16,
+  },
+
+  yearInfo: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 18,
   },
 
   button: {
-    marginTop: 40,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: "#222",
-    alignItems: "center",
+    backgroundColor: '#333',
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
   },
 
   buttonText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: 'bold',
   },
 });

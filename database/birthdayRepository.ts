@@ -8,6 +8,7 @@ export type Birthday = {
   year?: number | null;
 };
 
+// CREAR
 export async function addBirthday(
   name: string,
   day: number,
@@ -28,6 +29,7 @@ export async function addBirthday(
   );
 }
 
+// LEER
 export async function getBirthdays(): Promise<Birthday[]> {
   const db = await getDatabase();
 
@@ -40,4 +42,41 @@ export async function getBirthdays(): Promise<Birthday[]> {
   );
 
   return birthdays;
+}
+
+// EDITAR
+export async function updateBirthday(
+  id: number,
+  name: string,
+  day: number,
+  month: number,
+  year?: number | null
+) {
+  const db = await getDatabase();
+
+  await db.runAsync(
+    `
+    UPDATE birthdays
+    SET name = ?, day = ?, month = ?, year = ?
+    WHERE id = ?
+    `,
+    name,
+    day,
+    month,
+    year ?? null,
+    id
+  );
+}
+
+// ELIMINAR
+export async function deleteBirthday(id: number) {
+  const db = await getDatabase();
+
+  await db.runAsync(
+    `
+    DELETE FROM birthdays
+    WHERE id = ?
+    `,
+    id
+  );
 }
