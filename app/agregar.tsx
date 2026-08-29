@@ -7,6 +7,13 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
+import {
+  validateName,
+  validateDay,
+  validateMonth,
+  validateYear,
+  validateDate,
+} from "../utils/validation";
 
 export default function AgregarScreen() {
   const [nombre, setNombre] = useState("");
@@ -14,27 +21,49 @@ export default function AgregarScreen() {
   const [mes, setMes] = useState("");
   const [anio, setAnio] = useState("");
 
-  const guardarCumpleanos = () => {
-    if (!nombre.trim()) {
-      Alert.alert("Falta información", "Ingresa el nombre de la persona.");
-      return;
-    }
+const guardarCumpleanos = () => {
+  const nameError = validateName(nombre);
 
-    if (!dia || !mes) {
-      Alert.alert(
-        "Falta información",
-        "Ingresa el día y el mes del cumpleaños."
-      );
-      return;
-    }
+  if (nameError) {
+    Alert.alert("Nombre inválido", nameError);
+    return;
+  }
 
-    Alert.alert(
-      "Cumpleaños",
-      `Nombre: ${nombre}\nFecha: ${dia}/${mes}${
-        anio ? `/${anio}` : ""
-      }`
-    );
-  };
+  const dayError = validateDay(dia);
+
+  if (dayError) {
+    Alert.alert("Día inválido", dayError);
+    return;
+  }
+
+  const monthError = validateMonth(mes);
+
+  if (monthError) {
+    Alert.alert("Mes inválido", monthError);
+    return;
+  }
+
+  const yearError = validateYear(anio);
+
+  if (yearError) {
+    Alert.alert("Año inválido", yearError);
+    return;
+  }
+
+  const dateError = validateDate(dia, mes, anio);
+
+  if (dateError) {
+    Alert.alert("Fecha inválida", dateError);
+    return;
+  }
+
+  Alert.alert(
+    "Cumpleaños válido",
+    `Nombre: ${nombre.trim()}\nFecha: ${dia}/${mes}${
+      anio ? `/${anio}` : ""
+    }`
+  );
+};
 
   return (
     <View style={styles.container}>
