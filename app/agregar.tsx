@@ -20,6 +20,7 @@ import {
   scheduleBirthdayNotifications,
 } from '../notifications/birthdayNotifications';
 
+
 export default function Agregar() {
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState<Date | null>(null);

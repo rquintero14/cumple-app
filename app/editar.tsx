@@ -15,20 +15,10 @@ import {
   isNameAlreadyUsed,
 } from '../database/birthdayRepository';
 
-const MONTHS = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
+import {
+  cancelBirthdayNotifications,
+  scheduleBirthdayNotifications,
+} from '../notifications/birthdayNotifications';
 
 export default function Editar() {
   const params = useLocalSearchParams();
@@ -52,16 +42,16 @@ export default function Editar() {
     }
 
     const nameAlreadyUsed = await isNameAlreadyUsed(
-        name,
-        id
+      name,
+      id
     );
 
     if (nameAlreadyUsed) {
-        Alert.alert(
-            'Nombre duplicado',
-            'Ya existe otro cumpleaños registrado con ese nombre.'
-        );
-        return;
+      Alert.alert(
+        'Nombre duplicado',
+        'Ya existe otro cumpleaños registrado con ese nombre.'
+      );
+      return;
     }
 
     if (!day.trim()) {
@@ -145,12 +135,24 @@ export default function Editar() {
     }
 
     try {
+      // 1. Cancelar las notificaciones anteriores
+      await cancelBirthdayNotifications(id);
+
+      // 2. Actualizar el cumpleaños
       await updateBirthday(
         id,
         name.trim(),
         dayNumber,
         monthNumber,
         yearNumber
+      );
+
+      // 3. Programar nuevamente las notificaciones
+      await scheduleBirthdayNotifications(
+        id,
+        name.trim(),
+        dayNumber,
+        monthNumber
       );
 
       Alert.alert(
@@ -190,6 +192,10 @@ export default function Editar() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // 1. Cancelar las notificaciones
+              await cancelBirthdayNotifications(id);
+
+              // 2. Eliminar el cumpleaños
               await deleteBirthday(id);
 
               Alert.alert(
