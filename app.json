@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "cumple-app",
-    "slug": "cumple-app",
+    "name": "Cumpleaños",
+    "slug": "cumpleanos",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
