@@ -16,6 +16,9 @@ import {
   addBirthday,
   isNameAlreadyUsed,
 } from '../database/birthdayRepository';
+import {
+  scheduleBirthdayNotifications,
+} from '../notifications/birthdayNotifications';
 
 export default function Agregar() {
   const [name, setName] = useState('');
@@ -91,11 +94,18 @@ export default function Agregar() {
     }
 
     try {
-      await addBirthday(
+      const birthdayId = await addBirthday(
         name.trim(),
         dayNumber,
         monthNumber,
         yearNumber
+      );
+
+      await scheduleBirthdayNotifications(
+        birthdayId,
+        name.trim(),
+        dayNumber,
+        monthNumber
       );
 
       Alert.alert(

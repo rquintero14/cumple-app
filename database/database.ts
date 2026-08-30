@@ -1,7 +1,13 @@
 import * as SQLite from 'expo-sqlite';
 
+let db: SQLite.SQLiteDatabase | null = null;
+
 export async function getDatabase() {
-  const db = await SQLite.openDatabaseAsync('cumple.db');
+  if (db) {
+    return db;
+  }
+
+  db = await SQLite.openDatabaseAsync('cumple.db');
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS birthdays (

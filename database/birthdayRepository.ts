@@ -17,7 +17,7 @@ export async function addBirthday(
 ) {
   const db = await getDatabase();
 
-  await db.runAsync(
+  const result = await db.runAsync(
     `
     INSERT INTO birthdays (name, day, month, year)
     VALUES (?, ?, ?, ?)
@@ -27,6 +27,8 @@ export async function addBirthday(
     month,
     year ?? null
   );
+
+  return result.lastInsertRowId;
 }
 
 // COMPROBAR NOMBRE DUPLICADO
