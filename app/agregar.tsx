@@ -12,7 +12,10 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
-import { addBirthday } from '../database/birthdayRepository';
+import {
+  addBirthday,
+  isNameAlreadyUsed,
+} from '../database/birthdayRepository';
 
 export default function Agregar() {
   const [name, setName] = useState('');
@@ -43,6 +46,16 @@ export default function Agregar() {
       Alert.alert(
         'Dato requerido',
         'Escribe el nombre de la persona.'
+      );
+      return;
+    }
+
+    const nameAlreadyUsed = await isNameAlreadyUsed(name);
+
+    if (nameAlreadyUsed) {
+      Alert.alert(
+        'Nombre duplicado',
+        'Ya existe un cumpleaños registrado con ese nombre.'
       );
       return;
     }

@@ -29,6 +29,42 @@ export async function addBirthday(
   );
 }
 
+// COMPROBAR NOMBRE DUPLICADO
+export async function isNameAlreadyUsed(
+  name: string,
+  excludeId?: number
+): Promise<boolean> {
+  const db = await getDatabase();
+
+  const normalizedName = name.trim().toLowerCase();
+
+  let result;
+
+  if (excludeId !== undefined) {
+    result = await db.getFirstAsync<{ count: number }>(
+      `
+      SELECT COUNT(*) as count
+      FROM birthdays
+      WHERE LOWER(TRIM(name)) = ?
+      AND id != ?
+      `,
+      normalizedName,
+      excludeId
+    );
+  } else {
+    result = await db.getFirstAsync<{ count: number }>(
+      `
+      SELECT COUNT(*) as count
+      FROM birthdays
+      WHERE LOWER(TRIM(name)) = ?
+      `,
+      normalizedName
+    );
+  }
+
+  return (result?.count ?? 0) > 0;
+}
+
 // LEER
 export async function getBirthdays(): Promise<Birthday[]> {
   const db = await getDatabase();

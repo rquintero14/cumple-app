@@ -1,4 +1,5 @@
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
+import { Pressable, Text } from "react-native";
 
 export default function RootLayout() {
   return (
@@ -21,6 +22,28 @@ export default function RootLayout() {
         name="calendario"
         options={{
           title: "Calendario",
+            headerRight: () => (
+              <Pressable
+                onPress={() => router.setParams({ today: Date.now().toString() })}
+                style={{ marginRight: 10 }}
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                  }}
+                >
+                  Hoy
+                </Text>
+              </Pressable>
+            ),
+        }}
+      />
+
+      <Stack.Screen
+        name="editar"
+        options={{
+          title: 'Editar',
         }}
       />
     </Stack>

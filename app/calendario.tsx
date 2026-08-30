@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,7 +7,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from 'expo-router';
 
 import {
   Birthday,
@@ -32,10 +36,15 @@ const MONTHS = [
 const WEEK_DAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 export default function Calendario() {
-  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
-  const [loading, setLoading] = useState(true);
+  const params = useLocalSearchParams();
 
   const today = new Date();
+
+  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDay, setSelectedDay] = useState<number | null>(
+    today.getDate()
+  );
 
   const [currentMonth, setCurrentMonth] = useState(
     today.getMonth()
@@ -44,6 +53,16 @@ export default function Calendario() {
   const [currentYear, setCurrentYear] = useState(
     today.getFullYear()
   );
+
+    useEffect(() => {
+    if (params.today) {
+      const now = new Date();
+
+      setCurrentMonth(now.getMonth());
+      setCurrentYear(now.getFullYear());
+      setSelectedDay(now.getDate());
+    }
+  }, [params.today]);
 
   async function loadBirthdays() {
     try {
@@ -66,6 +85,8 @@ export default function Calendario() {
   );
 
   function goToPreviousMonth() {
+    setSelectedDay(null);
+
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear(currentYear - 1);
@@ -75,6 +96,8 @@ export default function Calendario() {
   }
 
   function goToNextMonth() {
+    setSelectedDay(null);
+
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear(currentYear + 1);
@@ -98,8 +121,6 @@ export default function Calendario() {
       1
     ).getDay();
 
-    // JavaScript: domingo = 0
-    // Nuestro calendario: lunes = 0
     return day === 0 ? 6 : day - 1;
   }
 
@@ -111,12 +132,38 @@ export default function Calendario() {
     );
   }
 
-  function getBirthdaysForDay(day: number) {
+  function getSelectedDayBirthdays() {
+    if (selectedDay === null) {
+      return [];
+    }
+
     return birthdays.filter(
       (birthday) =>
-        birthday.day === day &&
+        birthday.day === selectedDay &&
         birthday.month === currentMonth + 1
     );
+  }
+
+  function calculateAge(
+    birthDay: number,
+    birthMonth: number,
+    birthYear: number
+  ) {
+    const today = new Date();
+
+    let age = today.getFullYear() - birthYear;
+
+    const birthdayThisYear = new Date(
+      today.getFullYear(),
+      birthMonth - 1,
+      birthDay
+    );
+
+    if (today < birthdayThisYear) {
+      age--;
+    }
+
+    return age;
   }
 
   if (loading) {
@@ -136,32 +183,29 @@ export default function Calendario() {
 
   const calendarDays = [];
 
-  // Espacios antes del día 1
   for (let i = 0; i < firstDay; i++) {
     calendarDays.push(null);
   }
 
-  // Días del mes
   for (let day = 1; day <= daysInMonth; day++) {
     calendarDays.push(day);
   }
 
-  const monthBirthdays = birthdays.filter(
-    (birthday) =>
-      birthday.month === currentMonth + 1
-  );
+  const selectedBirthdays = getSelectedDayBirthdays();
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+    >
       {/* ENCABEZADO DEL MES */}
+
       <View style={styles.monthHeader}>
         <Pressable
           style={styles.arrowButton}
           onPress={goToPreviousMonth}
         >
-          <Text style={styles.arrow}>
-            ‹
-          </Text>
+          <Text style={styles.arrow}>‹</Text>
         </Pressable>
 
         <Text style={styles.monthTitle}>
@@ -172,13 +216,12 @@ export default function Calendario() {
           style={styles.arrowButton}
           onPress={goToNextMonth}
         >
-          <Text style={styles.arrow}>
-            ›
-          </Text>
+          <Text style={styles.arrow}>›</Text>
         </Pressable>
       </View>
 
       {/* DÍAS DE LA SEMANA */}
+
       <View style={styles.weekRow}>
         {WEEK_DAYS.map((day) => (
           <View
@@ -193,6 +236,7 @@ export default function Calendario() {
       </View>
 
       {/* CALENDARIO */}
+
       <View style={styles.calendarGrid}>
         {calendarDays.map((day, index) => {
           if (day === null) {
@@ -206,16 +250,21 @@ export default function Calendario() {
 
           const birthdayExists = hasBirthday(day);
 
-          const birthdaysForDay =
-            getBirthdaysForDay(day);
+          const isToday =
+            day === today.getDate() &&
+            currentMonth === today.getMonth() &&
+            currentYear === today.getFullYear();
 
           return (
-            <View
+            <Pressable
               key={day}
+              onPress={() => setSelectedDay(day)}
               style={[
                 styles.dayCell,
-                birthdayExists &&
-                  styles.birthdayDay,
+                birthdayExists && styles.birthdayDay,
+                isToday && styles.today,
+                selectedDay === day &&
+                  styles.selectedDay,
               ]}
             >
               <Text
@@ -233,50 +282,74 @@ export default function Calendario() {
                   🎂
                 </Text>
               )}
-            </View>
+            </Pressable>
           );
         })}
       </View>
 
-      {/* CUMPLEAÑOS DEL MES */}
-      <Text style={styles.sectionTitle}>
-        Cumpleaños de {MONTHS[currentMonth]}
-      </Text>
+      {/* CUMPLEAÑOS DEL DÍA SELECCIONADO */}
 
-      {monthBirthdays.length === 0 ? (
-        <Text style={styles.emptyText}>
-          No hay cumpleaños registrados este mes.
-        </Text>
-      ) : (
-        monthBirthdays.map((birthday) => {
-          const age = birthday.year
-            ? currentYear - birthday.year
-            : null;
+      {selectedDay !== null && (
+        <>
+          <Text style={styles.sectionTitle}>
+            Cumpleaños del {selectedDay} de{' '}
+            {MONTHS[currentMonth]}
+          </Text>
 
-          return (
-            <View
-              key={birthday.id}
-              style={styles.birthdayCard}
-            >
-              <View>
-                <Text style={styles.birthdayName}>
-                  {birthday.name}
-                </Text>
+          {selectedBirthdays.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No hay cumpleaños este día.
+            </Text>
+          ) : (
+            selectedBirthdays.map((birthday) => {
+              const age = birthday.year
+                ? calculateAge(
+                    birthday.day,
+                    birthday.month,
+                    birthday.year
+                  )
+                : null;
 
-                <Text style={styles.birthdayDate}>
-                  {birthday.day} de{' '}
-                  {MONTHS[currentMonth]}
-                </Text>
-              </View>
+              return (
+                <Pressable
+                  key={birthday.id}
+                  style={styles.birthdayCard}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/editar',
+                      params: {
+                        id: String(birthday.id),
+                        name: birthday.name,
+                        day: String(birthday.day),
+                        month: String(birthday.month),
+                        year: birthday.year
+                          ? String(birthday.year)
+                          : '',
+                      },
+                    })
+                  }
+                >
+                  <View>
+                    <Text style={styles.birthdayName}>
+                      {birthday.name}
+                    </Text>
 
-              {age !== null && (
-                <Text style={styles.age}>
-                  {age} años
-                </Text>
-              )}
-            </View>
-          );
-        })
+                    <Text style={styles.birthdayDate}>
+                      {birthday.day} de{' '}
+                      {MONTHS[currentMonth]}
+                    </Text>
+                  </View>
+
+                  {age !== null && (
+                    <Text style={styles.age}>
+                      {age} años
+                    </Text>
+                  )}
+                </Pressable>
+              );
+            })
+          )}
+        </>
       )}
     </ScrollView>
   );
@@ -290,7 +363,7 @@ const styles = StyleSheet.create({
   },
 
   contentContainer: {
-  paddingBottom: 60,
+    paddingBottom: 60,
   },
 
   center: {
@@ -367,10 +440,23 @@ const styles = StyleSheet.create({
 
   birthdayDay: {
     backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ccc',
   },
 
   birthdayDayText: {
     fontWeight: 'bold',
+  },
+
+  selectedDay: {
+    borderWidth: 2,
+    borderColor: '#5856b3',
+    backgroundColor: '#e8e8e8',
+  },
+
+  today: {
+    borderWidth: 2,
+    borderColor: '#000000',
   },
 
   birthdayIcon: {
